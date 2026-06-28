@@ -12,9 +12,9 @@ const db = new sqlite3.Database(dbPath, (err) => {
     db.run(`PRAGMA journal_mode=${mode};`);
     db.run("PRAGMA busy_timeout=5000;");
     
-    // Network-attached cloud storage has high disk flush latency. 
-    // Set synchronous to NORMAL in production to run async transactions while preserving integrity.
-    db.run(`PRAGMA synchronous = ${isProd ? "NORMAL" : "FULL"};`);
+    // Network-attached cloud storage has extremely high latency on disk flushes. 
+    // Set synchronous to OFF in production to completely bypass the NAS network write delay.
+    db.run(`PRAGMA synchronous = ${isProd ? "OFF" : "FULL"};`);
   }
 });
 
