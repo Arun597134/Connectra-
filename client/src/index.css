@@ -631,6 +631,8 @@ h1, h2, h3, h4 {
   justify-content: space-between;
   align-items: center;
   z-index: 10;
+  min-width: 0;
+  width: 100%;
 }
 
 .mobile-back-btn {
@@ -646,6 +648,8 @@ h1, h2, h3, h4 {
   display: flex;
   align-items: center;
   gap: 14px;
+  flex: 1;
+  min-width: 0;
 }
 
 .chat-contact-info h3 {
