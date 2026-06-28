@@ -84,6 +84,9 @@ db.serialize(() => {
     )
   `);
 
+  // Remove the specified account based on username (or email) as requested
+  db.run(`DELETE FROM users WHERE username = 'vijayakumarn065@gmail.com' OR email = 'vijayakumarn065@gmail.com'`);
+
   db.run(`
     CREATE TABLE IF NOT EXISTS contacts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
