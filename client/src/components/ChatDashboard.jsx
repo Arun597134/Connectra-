@@ -522,6 +522,8 @@ export default function ChatDashboard({
   const [textInput, setTextInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [typingContact, setTypingContact] = useState(null);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const touchStartPosRef = useRef(null);
 
   // Modals & Panels Toggles
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -1703,10 +1705,21 @@ export default function ChatDashboard({
       return;
     }
 
-    const text = textInput;
+    let text = textInput;
     setTextInput('');
     if (selectedContact) {
       currentSocket.emit('typing', { receiverId: selectedContact.id, isTyping: false });
+    }
+
+    if (replyingTo) {
+      text = JSON.stringify({
+        isReply: true,
+        replyToSender: replyingTo.sender_id === userId ? "You" : (replyingTo.sender_name || "Someone"),
+        replyToContent: replyingTo.media_type === 'image' ? '📷 Image' : (replyingTo.media_type === 'audio' ? '🎵 Voice Note' : replyingTo.content),
+        originalId: replyingTo.id,
+        text: text
+      });
+      setReplyingTo(null);
     }
 
     console.log('📤 Sending message:', text);
@@ -3371,6 +3384,18 @@ export default function ChatDashboard({
     c.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const scrollToMessage = (id) => {
+    const el = document.getElementById(`msg-row-${id}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.transition = 'background-color 0.5s';
+      el.style.backgroundColor = 'rgba(16, 185, 129, 0.25)';
+      setTimeout(() => {
+        el.style.backgroundColor = 'transparent';
+      }, 1500);
+    }
+  };
+
   return (
     <div className={`dashboard-container font-size-${fontSize} bubble-style-${bubbleStyle} blur-intensity-${blurIntensity} sidebar-${sidebarPosition} ${compactMode ? 'layout-compact' : ''}`}>
       {/* Sidebar - Contacts */}
@@ -4111,7 +4136,49 @@ export default function ChatDashboard({
                   });
 
                   return (
-                    <div key={msg.id || index} className={`message-row ${isMe ? 'me' : 'them'}`}>
+                    <div 
+                      key={msg.id || index} 
+                      id={`msg-row-${msg.id}`}
+                      className={`message-row ${isMe ? 'me' : 'them'}`}
+                      onTouchStart={(e) => {
+                        if (!msg.id || msg.isUploadingPlaceholder) return;
+                        touchStartPosRef.current = { x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY };
+                      }}
+                      onTouchMove={(e) => {
+                        if (!touchStartPosRef.current || !msg.id || msg.isUploadingPlaceholder) return;
+                        const currentX = e.targetTouches[0].clientX;
+                        const currentY = e.targetTouches[0].clientY;
+                        const diffX = currentX - touchStartPosRef.current.x;
+                        const diffY = Math.abs(currentY - touchStartPosRef.current.y);
+                        
+                        if (diffY > 30) {
+                          touchStartPosRef.current = null;
+                          const el = document.getElementById(`msg-row-${msg.id}`);
+                          if (el) el.style.transform = 'translateX(0px)';
+                          return;
+                        }
+
+                        if (diffX > 5 && diffX < 80) { 
+                          const el = document.getElementById(`msg-row-${msg.id}`);
+                          if (el) el.style.transform = `translateX(${diffX}px)`;
+                        }
+                      }}
+                      onTouchEnd={(e) => {
+                        if (!touchStartPosRef.current || !msg.id || msg.isUploadingPlaceholder) return;
+                        const currentX = e.changedTouches[0].clientX;
+                        const diffX = currentX - touchStartPosRef.current.x;
+                        if (diffX > 50) {
+                          setReplyingTo(msg);
+                        }
+                        const el = document.getElementById(`msg-row-${msg.id}`);
+                        if (el) {
+                          el.style.transition = 'transform 0.2s';
+                          el.style.transform = 'translateX(0px)';
+                          setTimeout(() => { if (el) el.style.transition = ''; }, 200);
+                        }
+                        touchStartPosRef.current = null;
+                      }}
+                    >
                       <div className="message-bubble glass-card" style={{ position: 'relative' }}>
                         {/* Quick reaction picker on hover */}
                         {!msg.isUploadingPlaceholder && msg.id && (
@@ -4571,7 +4638,45 @@ export default function ChatDashboard({
                           <CallLogRenderer msg={msg} />
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' }}>
-                            <p className="message-text">{renderMessageTextWithLinks(msg.content)}</p>
+                            {(() => {
+                              let displayContent = msg.content;
+                              let replyData = null;
+                              try {
+                                if (msg.content && msg.content.startsWith('{') && msg.content.includes('"isReply":true')) {
+                                  const parsed = JSON.parse(msg.content);
+                                  if (parsed.isReply) {
+                                    replyData = parsed;
+                                    displayContent = parsed.text;
+                                  }
+                                }
+                              } catch(e) {}
+                              return (
+                                <>
+                                  {replyData && (
+                                    <div 
+                                      className="replied-message-block"
+                                      onClick={() => scrollToMessage(replyData.originalId)}
+                                      style={{
+                                        background: 'rgba(0,0,0,0.2)',
+                                        borderLeft: '3px solid var(--primary-glow)',
+                                        padding: '6px 8px',
+                                        borderRadius: '4px',
+                                        marginBottom: '4px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '2px',
+                                        userSelect: 'none'
+                                      }}
+                                    >
+                                      <span style={{ fontSize: '0.7rem', color: 'var(--primary-glow)', fontWeight: 'bold' }}>{replyData.replyToSender}</span>
+                                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{replyData.replyToContent}</span>
+                                    </div>
+                                  )}
+                                  <p className="message-text">{renderMessageTextWithLinks(displayContent)}</p>
+                                </>
+                              );
+                            })()}
                             {translatedMessages[msg.id] && (
                               <div className="translated-text-container">
                                 <Languages size={12} />
@@ -4817,6 +4922,22 @@ export default function ChatDashboard({
                     <Clock size={18} />
                   </div>
                   <span className="attachment-drawer-label">Schedule</span>
+                </button>
+              </div>
+            )}
+
+            {replyingTo && (
+              <div className="replying-preview-box" style={{ padding: '8px 12px', background: 'rgba(0,0,0,0.4)', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', borderLeft: '3px solid var(--primary-glow)', paddingLeft: '8px' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--primary-glow)', fontWeight: 'bold' }}>
+                    Replying to {replyingTo.sender_id === userId ? "You" : (replyingTo.sender_name || "Someone")}
+                  </span>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {replyingTo.media_type === 'image' ? '📷 Image' : (replyingTo.media_type === 'audio' ? '🎵 Voice Note' : replyingTo.content)}
+                  </span>
+                </div>
+                <button type="button" onClick={() => setReplyingTo(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={16} />
                 </button>
               </div>
             )}
