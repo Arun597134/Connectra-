@@ -3,6 +3,10 @@
   command = "npm run build"
   publish = "dist"
 
+[build.environment]
+  NETLIFY_USE_NPM_CI = "false"
+  NPM_FLAGS = "--legacy-peer-deps"
+
 [[redirects]]
   from = "/api/*"
   to = "https://connectra-btxb.onrender.com/api/:splat"
