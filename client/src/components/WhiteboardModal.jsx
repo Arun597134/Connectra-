@@ -172,6 +172,7 @@ export default function WhiteboardModal({ socket, contact, onClose }) {
             onTouchMove={draw}
             onTouchEnd={stopDrawing}
             className="whiteboard-canvas"
+            style={{ touchAction: 'none' }}
           />
 
           <div className="whiteboard-toolbar">
