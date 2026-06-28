@@ -7,7 +7,10 @@ const dbPath = process.env.DATABASE_PATH || join(__dirname, 'database.sqlite');
 
 const db = new sqlite3.Database(dbPath, (err) => {
   if (!err) {
-    db.run("PRAGMA journal_mode=WAL;");
+    // Network-attached persistent storage on cloud platforms like Render lacks POSIX shared memory locks for WAL mode.
+    // Use TRUNCATE mode in production to prevent write locking bottlenecks, and keep WAL for local development.
+    const mode = process.env.DATABASE_PATH ? "TRUNCATE" : "WAL";
+    db.run(`PRAGMA journal_mode=${mode};`);
     db.run("PRAGMA busy_timeout=5000;");
   }
 });
