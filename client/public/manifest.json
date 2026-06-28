@@ -1,0 +1,21 @@
+{
+  "short_name": "Connectra",
+  "name": "Connectra Chat",
+  "icons": [
+    {
+      "src": "/logo-icon.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/logo-icon.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#06080E",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#10B981"
+}
