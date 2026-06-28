@@ -3733,9 +3733,9 @@ export default function ChatDashboard({
                     )}
                     {onlineStatuses[selectedContact.id] === 'online' && <span className="online-indicator"></span>}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <h3>{selectedContact.username}</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                      <h3 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>{selectedContact.username}</h3>
                       {isSecretChatActive && (
                         <span 
                           className="secret-chat-header-badge" 
@@ -3790,8 +3790,8 @@ export default function ChatDashboard({
                   <div className="contact-avatar group-avatar-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary-glass)', color: 'var(--primary-glow)', width: '40px', height: '40px', borderRadius: '50%' }}>
                     <Users size={20} />
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <h3>{selectedGroup.name}</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+                    <h3 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>{selectedGroup.name}</h3>
                     <p className="chat-sub" style={{ maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {selectedGroup.members?.map(m => m.username).join(', ')}
                     </p>
