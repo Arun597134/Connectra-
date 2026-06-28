@@ -6,22 +6,24 @@ import fs from 'fs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isRender = process.env.RENDER === 'true';
 
-let dbPath = join(__dirname, 'database.sqlite');
+let dbPath = process.env.DATABASE_PATH || (isRender ? '/data/database.sqlite' : join(__dirname, 'database.sqlite'));
 let usingPersistentDisk = false;
 
-if (process.env.DATABASE_PATH) {
-  dbPath = process.env.DATABASE_PATH;
-  usingPersistentDisk = true;
-} else if (isRender) {
-  // Test if /data directory exists and is writable before mounting the database on it
-  try {
-    fs.accessSync('/data', fs.constants.W_OK);
-    dbPath = '/data/database.sqlite';
-    usingPersistentDisk = true;
-    console.log("💾 Writable Persistent Disk detected at /data. Storing database securely.");
-  } catch (e) {
-    console.warn("⚠️ Persistent Disk /data is NOT writable or not mounted yet. Falling back to local SSD storage.");
+const targetDir = dirname(dbPath);
+
+try {
+  // Ensure the target directory exists and is writable before mounting the database
+  if (!fs.existsSync(targetDir)) {
+    console.log(`⚠️ Directory ${targetDir} does not exist. Attempting to create it...`);
+    fs.mkdirSync(targetDir, { recursive: true });
   }
+  fs.accessSync(targetDir, fs.constants.W_OK);
+  usingPersistentDisk = dbPath !== join(__dirname, 'database.sqlite');
+  console.log(`💾 Verified writable storage at ${targetDir}.`);
+} catch (e) {
+  console.error(`❌ ERROR: Cannot write to ${targetDir}. Falling back to safe local storage. Reason:`, e.message);
+  dbPath = join(__dirname, 'database.sqlite');
+  usingPersistentDisk = false;
 }
 
 const db = new sqlite3.Database(dbPath, (err) => {
