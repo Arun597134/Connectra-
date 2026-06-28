@@ -3,17 +3,19 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const dbPath = process.env.DATABASE_PATH || join(__dirname, 'database.sqlite');
+// Auto-detect Render cloud environment to set production paths and options automatically
+const isRender = process.env.RENDER === 'true';
+const dbPath = process.env.DATABASE_PATH || (isRender ? '/data/database.sqlite' : join(__dirname, 'database.sqlite'));
 
 const db = new sqlite3.Database(dbPath, (err) => {
   if (!err) {
-    const isProd = !!process.env.DATABASE_PATH;
+    const isProd = !!process.env.DATABASE_PATH || isRender;
     const mode = isProd ? "TRUNCATE" : "WAL";
     db.run(`PRAGMA journal_mode=${mode};`);
     db.run("PRAGMA busy_timeout=5000;");
     
-    // Network-attached cloud storage has extremely high latency on disk flushes. 
-    // Set synchronous to OFF in production to completely bypass the NAS network write delay.
+    // Cloud network disks have high write flush delays. 
+    // Set synchronous to OFF on Render to allow instant database writes.
     db.run(`PRAGMA synchronous = ${isProd ? "OFF" : "FULL"};`);
   }
 });
