@@ -1,22 +1,43 @@
 import sqlite3 from 'sqlite3';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-// Auto-detect Render cloud environment to set production paths and options automatically
 const isRender = process.env.RENDER === 'true';
-const dbPath = process.env.DATABASE_PATH || (isRender ? '/data/database.sqlite' : join(__dirname, 'database.sqlite'));
+
+let dbPath = join(__dirname, 'database.sqlite');
+let usingPersistentDisk = false;
+
+if (process.env.DATABASE_PATH) {
+  dbPath = process.env.DATABASE_PATH;
+  usingPersistentDisk = true;
+} else if (isRender) {
+  // Test if /data directory exists and is writable before mounting the database on it
+  try {
+    fs.accessSync('/data', fs.constants.W_OK);
+    dbPath = '/data/database.sqlite';
+    usingPersistentDisk = true;
+    console.log("💾 Writable Persistent Disk detected at /data. Storing database securely.");
+  } catch (e) {
+    console.warn("⚠️ Persistent Disk /data is NOT writable or not mounted yet. Falling back to local SSD storage.");
+  }
+}
 
 const db = new sqlite3.Database(dbPath, (err) => {
-  if (!err) {
-    const isProd = !!process.env.DATABASE_PATH || isRender;
-    const mode = isProd ? "TRUNCATE" : "WAL";
-    db.run(`PRAGMA journal_mode=${mode};`);
+  if (err) {
+    console.error("❌ SQLite database connection failed:", err);
+  } else {
+    console.log("✅ Successfully connected to SQLite database at:", dbPath);
+    const mode = usingPersistentDisk ? "TRUNCATE" : "WAL";
+    db.run(`PRAGMA journal_mode=${mode};`, (pErr) => {
+      if (pErr) console.warn("Failed to set journal mode:", pErr);
+    });
     db.run("PRAGMA busy_timeout=5000;");
     
-    // Cloud network disks have high write flush delays. 
-    // Set synchronous to OFF on Render to allow instant database writes.
-    db.run(`PRAGMA synchronous = ${isProd ? "OFF" : "FULL"};`);
+    // Set synchronous mode to OFF if on network-attached storage to avoid flush latencies
+    const syncMode = usingPersistentDisk ? "OFF" : "FULL";
+    db.run(`PRAGMA synchronous = ${syncMode};`);
   }
 });
 
