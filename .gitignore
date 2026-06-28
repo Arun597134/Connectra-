@@ -1,0 +1,37 @@
+# Dependency directories
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Production build output
+client/dist/
+
+# Local database files
+*.sqlite
+*.sqlite-journal
+*.sqlite3
+*.db
+server/*.sqlite
+server/*.sqlite-journal
+server/*.sqlite3
+server/*.db
+
+# Local environment variables
+.env
+.env.local
+client/.env
+client/.env.local
+server/.env
+server/.env.local
+
+# Logs, cache and system files
+.DS_Store
+Thumbs.db
+npm-debug.log*
+.agents/
+.gemini/
+*.log
+
+# Uploaded media from tests
+server/uploads/*
+!server/uploads/.gitkeep
