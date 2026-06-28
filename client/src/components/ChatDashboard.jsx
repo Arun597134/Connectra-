@@ -308,7 +308,7 @@ function ImagePreviewModal({ imageUrl, message, token, userId, onMessageDeleted,
 
     setDeleting(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/messages/delete/${message.id}`, {
+      const res = await fetch(`/api/messages/delete/${message.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -735,9 +735,9 @@ export default function ChatDashboard({
 
   // 1. Initialize Socket Connection - connect directly to backend server
   useEffect(() => {
-    // Connect to the backend server. In dev mode, Vite proxies /socket.io to port 5000.
-    // Use window.location.origin so it goes through the Vite proxy.
-    const newSocket = io(window.location.origin, {
+    // Connect to the backend server. In production, connect directly to the hosted Render server.
+    const socketUrl = import.meta.env.PROD ? 'https://connectra-btxb.onrender.com' : window.location.origin;
+    const newSocket = io(socketUrl, {
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
